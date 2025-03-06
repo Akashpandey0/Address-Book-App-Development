@@ -17,6 +17,10 @@ public class AddressController {
     @Autowired
     private AddressService addressService;
 
+//    Set up application.properties for MySQL Configuration
+//    Create a RestController to handle HTTP requests
+//    Use ResponseEntity to return JSON responses
+
     // Create Address
     @PostMapping
     public ResponseEntity<Address> createAddress(@RequestBody AddressDTO addressDTO) {
