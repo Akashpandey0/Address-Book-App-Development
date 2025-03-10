@@ -1,7 +1,6 @@
 package com.project.AddressBookAppDevelopment.controller;
 
 import com.project.AddressBookAppDevelopment.dto.AddressDTO;
-import com.project.AddressBookAppDevelopment.model.Address;
 import com.project.AddressBookAppDevelopment.service.AddressService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,44 +16,35 @@ public class AddressController {
     @Autowired
     private AddressService addressService;
 
-//    Set up application.properties for MySQL Configuration
-//    Create a RestController to handle HTTP requests
-//    Use ResponseEntity to return JSON responses
-
-    // Create Address
+    // CREATE - Add an Address
     @PostMapping
-    public ResponseEntity<Address> createAddress(@RequestBody AddressDTO addressDTO) {
-        Address savedAddress = addressService.addAddress(addressDTO);
-        return ResponseEntity.ok(savedAddress);
+    public ResponseEntity<AddressDTO> createAddress(@RequestBody AddressDTO addressDTO) {
+        return ResponseEntity.ok(addressService.addAddress(addressDTO));
     }
 
-    // Get All Addresses
+    // READ - Get All Addresses
     @GetMapping
-    public ResponseEntity<List<Address>> getAllAddresses() {
+    public ResponseEntity<List<AddressDTO>> getAllAddresses() {
         return ResponseEntity.ok(addressService.getAllAddresses());
     }
 
-    // Get Address by ID
+    // READ - Get Address by ID
     @GetMapping("/{id}")
-    public ResponseEntity<Optional<Address>> getAddressById(@PathVariable Long id) {
+    public ResponseEntity<Optional<AddressDTO>> getAddressById(@PathVariable Long id) {
         return ResponseEntity.ok(addressService.getAddressById(id));
     }
 
-    // Update Address
+    // UPDATE - Update an Address
     @PutMapping("/{id}")
-    public ResponseEntity<Address> updateAddress(@PathVariable Long id, @RequestBody AddressDTO addressDTO) {
-        Address updatedAddress = addressService.updateAddress(id, addressDTO);
-        if (updatedAddress != null) {
-            return ResponseEntity.ok(updatedAddress);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<AddressDTO> updateAddress(@PathVariable Long id, @RequestBody AddressDTO addressDTO) {
+        AddressDTO updatedAddress = addressService.updateAddress(id, addressDTO);
+        return updatedAddress != null ? ResponseEntity.ok(updatedAddress) : ResponseEntity.notFound().build();
     }
 
-    // Delete Address
+    // DELETE - Remove an Address
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteAddress(@PathVariable Long id) {
-        addressService.deleteAddress(id);
-        return ResponseEntity.ok("Address deleted successfully");
+        boolean isDeleted = addressService.deleteAddress(id);
+        return isDeleted ? ResponseEntity.ok("Address deleted successfully") : ResponseEntity.notFound().build();
     }
 }
