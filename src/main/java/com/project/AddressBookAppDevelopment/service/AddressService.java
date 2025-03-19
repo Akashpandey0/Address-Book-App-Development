@@ -1,53 +1,86 @@
 package com.project.AddressBookAppDevelopment.service;
 
-import com.project.AddressBookAppDevelopment.dto.AddressDTO;
+import com.project.AddressBookAppDevelopment.model.Address;
+import com.project.AddressBookAppDevelopment.repository.AddressRepository;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class AddressService {
 
-    private final List<AddressDTO> addressList = new ArrayList<>();
-    private long idCounter = 1; // To assign unique IDs
+    @Autowired
+    private AddressRepository addressRepository;
 
-    // CREATE - Add an Address
-    public AddressDTO addAddress(AddressDTO addressDTO) {
-        addressDTO.setId(idCounter++); // Assign a unique ID
-        addressList.add(addressDTO);
-        return addressDTO;
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    // ✅ GET All Addresses (Caches in Redis)
+    @Cacheable(value = "addresses")
+    public List<Address> getAllAddresses() {
+        System.out.println("Fetching addresses from DB...");
+        return addressRepository.findAll();
     }
 
-    // READ - Get All Addresses
-    public List<AddressDTO> getAllAddresses() {
-        return addressList;
+    // ✅ GET Address by ID (Caches in Redis)
+    @Cacheable(value = "address", key = "#id")
+    public Optional<Address> getAddressById(Long id) {
+        System.out.println("Fetching Address ID " + id + " from DB...");
+        return addressRepository.findById(id);
     }
 
-    // READ - Get Address by ID
-    public Optional<AddressDTO> getAddressById(Long id) {
-        return addressList.stream()
-                .filter(address -> address.getId().equals(id))
-                .findFirst();
+    // ✅ CREATE Address (Clears Cache & Publishes Event)
+    @CacheEvict(value = {"addresses"}, allEntries = true)  // Clears list cache
+    public Address addAddress(Address address) {
+        Address savedAddress = addressRepository.save(address);
+
+        // 🔔 Publish event to RabbitMQ
+        rabbitTemplate.convertAndSend("address.queue", "New address added: " + savedAddress.getName());
+
+        return savedAddress;
     }
 
-    // UPDATE - Update an Address
-    public AddressDTO updateAddress(Long id, AddressDTO updatedAddress) {
-        Optional<AddressDTO> existingAddress = getAddressById(id);
+    // ✅ UPDATE Address (Updates Cache & Publishes Event)
+    @CachePut(value = "address", key = "#id")
+    public Address updateAddress(Long id, Address addressDetails) {
+        Optional<Address> existingAddress = addressRepository.findById(id);
+
         if (existingAddress.isPresent()) {
-            AddressDTO address = existingAddress.get();
-            address.setName(updatedAddress.getName());
-            address.setEmail(updatedAddress.getEmail());
-            address.setPhone(updatedAddress.getPhone());
-            address.setCity(updatedAddress.getCity());
-            return address;
+            Address address = existingAddress.get();
+            address.setName(addressDetails.getName());
+            address.setEmail(addressDetails.getEmail());
+            address.setPhone(addressDetails.getPhone());
+            address.setCity(addressDetails.getCity());
+
+            Address updatedAddress = addressRepository.save(address);
+
+            // 🔔 Publish event to RabbitMQ
+            rabbitTemplate.convertAndSend("address.queue", "Address updated: " + updatedAddress.getName());
+
+            return updatedAddress;
         }
         return null;
     }
 
-    // DELETE - Remove an Address
+    // ✅ DELETE Address (Clears Cache & Publishes Event)
+    @CacheEvict(value = {"addresses", "address"}, allEntries = true)
     public boolean deleteAddress(Long id) {
-        return addressList.removeIf(address -> address.getId().equals(id));
+        Optional<Address> existingAddress = addressRepository.findById(id);
+
+        if (existingAddress.isPresent()) {
+            addressRepository.deleteById(id);
+
+            // 🔔 Publish event to RabbitMQ
+            rabbitTemplate.convertAndSend("address.queue", "Address deleted: " + id);
+
+            return true;
+        }
+        return false;
     }
 }
