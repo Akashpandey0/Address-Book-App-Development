@@ -9,11 +9,16 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue userQueue() {
-        return new Queue("user.queue", false);
+        return new Queue("user.queue", true, false, false); // Durable, Non-Exclusive, Non-AutoDelete
     }
 
     @Bean
     public Queue addressQueue() {
-        return new Queue("address.queue", false);
+        return new Queue("address.queue", true, false, false); // Durable, Non-Exclusive, Non-AutoDelete
+    }
+
+    @Bean
+    public Queue passwordQueue() {
+        return new Queue("password.queue", true, false, false); // Durable, Non-Exclusive, Non-AutoDelete
     }
 }

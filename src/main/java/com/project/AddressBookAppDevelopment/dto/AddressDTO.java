@@ -1,13 +1,12 @@
 package com.project.AddressBookAppDevelopment.dto;
 
 public class AddressDTO {
-    private Long id; // Unique ID for the Address
+    private Long id;
     private String name;
     private String email;
     private String phone;
     private String city;
 
-    // Constructors
     public AddressDTO() {}
 
     public AddressDTO(Long id, String name, String email, String phone, String city) {
@@ -18,7 +17,6 @@ public class AddressDTO {
         this.city = city;
     }
 
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

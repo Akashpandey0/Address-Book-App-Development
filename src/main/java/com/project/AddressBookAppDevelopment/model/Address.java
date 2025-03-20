@@ -15,17 +15,16 @@ public class Address {
     private String phone;
     private String city;
 
-    // Constructors
     public Address() {}
 
-    public Address(String name, String email, String phone, String city) {
+    public Address(Long id, String name, String email, String phone, String city) {
+        this.id = id;
         this.name = name;
         this.email = email;
         this.phone = phone;
         this.city = city;
     }
 
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

@@ -1,16 +1,14 @@
 package com.project.AddressBookAppDevelopment.service;
 
+import com.project.AddressBookAppDevelopment.dto.AddressDTO;
 import com.project.AddressBookAppDevelopment.model.Address;
 import com.project.AddressBookAppDevelopment.repository.AddressRepository;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class AddressService {
@@ -18,67 +16,55 @@ public class AddressService {
     @Autowired
     private AddressRepository addressRepository;
 
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
-
-    // ✅ GET All Addresses (Caches in Redis)
-    @Cacheable(value = "addresses")
-    public List<Address> getAllAddresses() {
-        System.out.println("Fetching addresses from DB...");
-        return addressRepository.findAll();
+    // Convert Address Entity to DTO
+    private AddressDTO convertToDTO(Address address) {
+        return new AddressDTO(address.getId(), address.getName(), address.getEmail(), address.getPhone(), address.getCity());
     }
 
-    // ✅ GET Address by ID (Caches in Redis)
-    @Cacheable(value = "address", key = "#id")
-    public Optional<Address> getAddressById(Long id) {
-        System.out.println("Fetching Address ID " + id + " from DB...");
-        return addressRepository.findById(id);
+    // Convert DTO to Address Entity
+    private Address convertToEntity(AddressDTO addressDTO) {
+        return new Address(addressDTO.getId(), addressDTO.getName(), addressDTO.getEmail(), addressDTO.getPhone(), addressDTO.getCity());
     }
 
-    // ✅ CREATE Address (Clears Cache & Publishes Event)
-    @CacheEvict(value = {"addresses"}, allEntries = true)  // Clears list cache
-    public Address addAddress(Address address) {
+    // ✅ CREATE - Add an Address
+    public AddressDTO addAddress(AddressDTO addressDTO) {
+        Address address = convertToEntity(addressDTO);
         Address savedAddress = addressRepository.save(address);
-
-        // 🔔 Publish event to RabbitMQ
-        rabbitTemplate.convertAndSend("address.queue", "New address added: " + savedAddress.getName());
-
-        return savedAddress;
+        return convertToDTO(savedAddress);
     }
 
-    // ✅ UPDATE Address (Updates Cache & Publishes Event)
-    @CachePut(value = "address", key = "#id")
-    public Address updateAddress(Long id, Address addressDetails) {
-        Optional<Address> existingAddress = addressRepository.findById(id);
+    // ✅ READ - Get All Addresses
+    public List<AddressDTO> getAllAddresses() {
+        return addressRepository.findAll()
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
 
+    // ✅ READ - Get Address by ID
+    public Optional<AddressDTO> getAddressById(Long id) {
+        return addressRepository.findById(id).map(this::convertToDTO);
+    }
+
+    // ✅ UPDATE - Update an Address
+    public AddressDTO updateAddress(Long id, AddressDTO addressDTO) {
+        Optional<Address> existingAddress = addressRepository.findById(id);
         if (existingAddress.isPresent()) {
             Address address = existingAddress.get();
-            address.setName(addressDetails.getName());
-            address.setEmail(addressDetails.getEmail());
-            address.setPhone(addressDetails.getPhone());
-            address.setCity(addressDetails.getCity());
-
+            address.setName(addressDTO.getName());
+            address.setEmail(addressDTO.getEmail());
+            address.setPhone(addressDTO.getPhone());
+            address.setCity(addressDTO.getCity());
             Address updatedAddress = addressRepository.save(address);
-
-            // 🔔 Publish event to RabbitMQ
-            rabbitTemplate.convertAndSend("address.queue", "Address updated: " + updatedAddress.getName());
-
-            return updatedAddress;
+            return convertToDTO(updatedAddress);
         }
         return null;
     }
 
-    // ✅ DELETE Address (Clears Cache & Publishes Event)
-    @CacheEvict(value = {"addresses", "address"}, allEntries = true)
+    // ✅ DELETE - Remove an Address
     public boolean deleteAddress(Long id) {
-        Optional<Address> existingAddress = addressRepository.findById(id);
-
-        if (existingAddress.isPresent()) {
+        if (addressRepository.existsById(id)) {
             addressRepository.deleteById(id);
-
-            // 🔔 Publish event to RabbitMQ
-            rabbitTemplate.convertAndSend("address.queue", "Address deleted: " + id);
-
             return true;
         }
         return false;

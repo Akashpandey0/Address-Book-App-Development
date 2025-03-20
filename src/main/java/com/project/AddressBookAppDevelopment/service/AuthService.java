@@ -33,13 +33,17 @@ public class AuthService {
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // ✅ REGISTER USER (With Event Publishing)
-    public void registerUser(User user) {
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+    public void registerUser(String username, String email, String password) {
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
         userRepository.save(user);
 
         // Publish event to RabbitMQ
-        rabbitTemplate.convertAndSend("user.queue", "New user registered: " + user.getEmail());
+        rabbitTemplate.convertAndSend("user.queue", "New user registered: " + email);
     }
+
 
     // ✅ LOGIN USER (Uses Redis Cache for Performance)
     @Cacheable(value = "userTokens", key = "#email")
@@ -50,6 +54,7 @@ public class AuthService {
         }
         return null;
     }
+
 
     // ✅ GENERATE PASSWORD RESET TOKEN
     public void generateResetToken(String email) {
