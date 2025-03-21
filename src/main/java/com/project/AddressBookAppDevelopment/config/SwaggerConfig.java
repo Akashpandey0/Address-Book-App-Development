@@ -9,10 +9,11 @@ import org.springframework.context.annotation.Configuration;
 public class SwaggerConfig {
 
     @Bean
-    public OpenAPI customOpenAPI() {
+    public OpenAPI openAPI() {
         return new OpenAPI()
-                .info(new Info().title("Address Book API")
-                        .version("1.0")
-                        .description("API documentation for Address Book application"));
+                .info(new Info()
+                        .title("Address Book API")
+                        .description("API documentation for the Address Book Application")
+                        .version("1.0.0"));
     }
 }

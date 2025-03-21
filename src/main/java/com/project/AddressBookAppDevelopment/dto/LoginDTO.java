@@ -7,17 +7,12 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserDTO {
+public class LoginDTO {
 
-    @NotBlank(message = "Name is mandatory")
-    private String name;
-
-    @Email(message = "Email should be valid")
+    @Email(message = "Invalid email format")
+    @NotBlank(message = "Email is mandatory")
     private String email;
 
     @NotBlank(message = "Password is mandatory")
     private String password;
-
-    @NotBlank(message = "Role is mandatory")
-    private String role;
 }
